@@ -1,6 +1,7 @@
 import yaml
 import requests
 import os
+import itertools
 
 if(not os.path.isfile('credentials.yaml')):
     username = input("Enter kodi username: ")
@@ -25,6 +26,7 @@ def get_movie_id_from_title(title, username, password, message_id_counter):
                 "value": title}}},
         timeout=5,
         auth=(username, password))
+    response.raise_for_status()
     return(response.json()["result"]["movies"][0]["movieid"])
 
 def play_movie_from_title(title, username, password, message_id_counter):
@@ -38,6 +40,7 @@ def play_movie_from_title(title, username, password, message_id_counter):
                 message_id_counter)}}},
         timeout=5,
         auth=(username, password))
+    response.raise_for_status()
     return(response)
 
 def stop_all_players(username, password, message_id_counter):
@@ -56,6 +59,8 @@ def stop_all_players(username, password, message_id_counter):
                 "id": next(message_id_counter)}, 
             timeout=5,
             auth=(username, password))
+    for i in responses:
+        i.raise_for_status()
     return(responses)
 
 def play_pause(username, password, message_id_counter):
@@ -73,6 +78,21 @@ def play_pause(username, password, message_id_counter):
                 "id": next(message_id_counter)}, 
             timeout=5,
             auth=(username, password))
+        response.raise_for_status()
         return(response)
     else:
         return(False)
+
+def get_movie_data(username, password, message_id_counter):
+    response = requests.post('http://localhost:8080/jsonrpc',
+        json={"jsonrpc": "2.0", 
+            "method": "VideoLibrary.GetMovies", 
+            "id": next(message_id_counter),
+            "params": {"properties" : ["thumbnail", "playcount", "file"], 
+            "sort": { "order": "ascending", 
+                    "method": "label", 
+                    "ignorearticle": True }}},
+        timeout=5,
+        auth=(username, config))
+    response.raise_for_status()
+    return(response.json()["result"]["movies"])
